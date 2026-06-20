@@ -1,0 +1,267 @@
+// Security Headers Analyzer — Prisma Schema
+// Target: PostgreSQL (EDB native)
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextSearch", "postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [pg_trgm, btree_gin, unaccent, uuid_ossp(map: "uuid-ossp")]
+}
+
+// ─── Analysis ────────────────────────────────────────────────
+model Analysis {
+  id            String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  correlationId String   @unique @map("correlation_id") @db.VarChar(64)
+  url           String   @db.VarChar(2048)
+  domain        String   @db.VarChar(253)
+  finalUrl      String?  @map("final_url") @db.VarChar(2048)
+  statusCode    Int?     @map("status_code")
+  duration      Int?     // ms
+  analyzedAt    DateTime @default(now()) @map("analyzed_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Scores
+  overallScore    Float?  @map("overall_score")
+  grade           String? @db.VarChar(3)
+  headersScore    Float?  @map("headers_score")
+  tlsScore        Float?  @map("tls_score")
+  cspScore        Float?  @map("csp_score")
+  cookiesScore    Float?  @map("cookies_score")
+  dnsScore        Float?  @map("dns_score")
+  reputationScore Float?  @map("reputation_score")
+
+  // Risk flags
+  xssRisk           String? @map("xss_risk") @db.VarChar(16)
+  clickjackingRisk  String? @map("clickjacking_risk") @db.VarChar(16)
+  mitmRisk          String? @map("mitm_risk") @db.VarChar(16)
+
+  // HTTP info
+  http2Enabled Boolean? @map("http2_enabled")
+  http3Enabled Boolean? @map("http3_enabled")
+  cdn          String?  @db.VarChar(64)
+  waf          String?  @db.VarChar(64)
+  serverTech   String[] @map("server_tech")
+  ttfb         Int?     // ms
+
+  // TLS
+  tlsGrade        String?   @map("tls_grade") @db.VarChar(4)
+  certExpiry      DateTime? @map("cert_expiry")
+  certIssuer      String?   @map("cert_issuer") @db.VarChar(512)
+  hstsEnabled     Boolean?  @map("hsts_enabled")
+  hstsMaxAge      Int?      @map("hsts_max_age")
+  heartbleed      Boolean?
+  poodle          Boolean?
+
+  // VT
+  vtMalicious     Int?    @map("vt_malicious")
+  vtReputation    Int?    @map("vt_reputation")
+  vtThreatNames   String[] @map("vt_threat_names")
+
+  // Metadata
+  jobId     String? @map("job_id") @db.VarChar(64)
+  ipAddress String? @map("ip_address") @db.VarChar(45)
+  userAgent String? @map("user_agent") @db.VarChar(512)
+
+  // Full raw JSON
+  rawResult Json? @map("raw_result")
+
+  // Relations
+  headers       HeaderResult[]
+  cookies       CookieResult[]
+  improvements  Improvement[]
+  compliance    ComplianceResult?
+  dnsScan       DnsScan?
+  jobLog        JobLog?
+
+  @@index([domain])
+  @@index([analyzedAt(sort: Desc)])
+  @@index([overallScore])
+  @@index([grade])
+  @@index([domain, analyzedAt(sort: Desc)])
+  @@map("analyses")
+}
+
+// ─── Header Results ──────────────────────────────────────────
+model HeaderResult {
+  id           String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  analysisId   String   @map("analysis_id") @db.Uuid
+  name         String   @db.VarChar(128)
+  value        String?  @db.Text
+  status       String   @db.VarChar(16) // present | missing | misconfigured | deprecated
+  severity     String   @db.VarChar(16) // critical | high | medium | low | info
+  score        Float
+  maxScore     Float    @map("max_score")
+  recommendation String? @db.Text
+  details      String?  @db.Text
+  cweIds       String[] @map("cwe_ids")
+  owaspCategory String? @map("owasp_category") @db.VarChar(64)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  analysis Analysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+
+  @@index([analysisId])
+  @@index([name])
+  @@index([status])
+  @@map("header_results")
+}
+
+// ─── Cookie Results ──────────────────────────────────────────
+model CookieResult {
+  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  analysisId String   @map("analysis_id") @db.Uuid
+  name       String   @db.VarChar(256)
+  httpOnly   Boolean  @map("http_only")
+  secure     Boolean
+  sameSite   String?  @map("same_site") @db.VarChar(16)
+  issues     Json?
+  risk       String   @db.VarChar(16)
+  score      Float
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  analysis Analysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+
+  @@index([analysisId])
+  @@map("cookie_results")
+}
+
+// ─── Improvements ────────────────────────────────────────────
+model Improvement {
+  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  analysisId String   @map("analysis_id") @db.Uuid
+  priority   Int
+  category   String   @db.VarChar(64)
+  header     String   @db.VarChar(128)
+  action     String   @db.Text
+  impact     String   @db.Text
+  effort     String   @db.VarChar(16)
+  scoreGain  Float    @map("score_gain")
+  codeExample String? @map("code_example") @db.Text
+  references  String[] @map("references")
+
+  analysis Analysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+
+  @@index([analysisId])
+  @@map("improvements")
+}
+
+// ─── Compliance ──────────────────────────────────────────────
+model ComplianceResult {
+  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  analysisId      String   @unique @map("analysis_id") @db.Uuid
+  pciCompliant    Boolean  @map("pci_compliant")
+  pciScore        Float    @map("pci_score")
+  pciIssues       String[] @map("pci_issues")
+  gdprCompliant   Boolean  @map("gdpr_compliant")
+  gdprScore       Float    @map("gdpr_score")
+  gdprIssues      String[] @map("gdpr_issues")
+  hipaaCompliant  Boolean  @map("hipaa_compliant")
+  hipaaScore      Float    @map("hipaa_score")
+  owaspCompliant  Boolean  @map("owasp_compliant")
+  owaspScore      Float    @map("owasp_score")
+  nistCompliant   Boolean  @map("nist_compliant")
+  nistScore       Float    @map("nist_score")
+  cisCompliant    Boolean  @map("cis_compliant")
+  cisScore        Float    @map("cis_score")
+
+  analysis Analysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+
+  @@map("compliance_results")
+}
+
+// ─── DNS Scans ────────────────────────────────────────────────
+model DnsScan {
+  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  analysisId String   @unique @map("analysis_id") @db.Uuid
+  domain     String   @db.VarChar(253)
+  ipv4       String[] @map("ipv4")
+  ipv6       String[] @map("ipv6")
+  mx         Json?
+  txt        String[]
+  ns         String[]
+  dmarc      String?  @db.Text
+  spf        String?  @db.Text
+  dnssec     Boolean
+  caa        String[]
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  analysis Analysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+
+  @@index([domain])
+  @@map("dns_scans")
+}
+
+// ─── Job Logs ─────────────────────────────────────────────────
+model JobLog {
+  id            String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  analysisId    String   @unique @map("analysis_id") @db.Uuid
+  jobId         String   @map("job_id") @db.VarChar(64)
+  correlationId String   @map("correlation_id") @db.VarChar(64)
+  status        String   @db.VarChar(16)
+  workerType    String?  @map("worker_type") @db.VarChar(16)
+  attempts      Int      @default(0)
+  startedAt     DateTime? @map("started_at")
+  completedAt   DateTime? @map("completed_at")
+  error         String?  @db.Text
+  stages        Json?
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  analysis Analysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+  @@index([status])
+  @@map("job_logs")
+}
+
+// ─── Domain Cache ─────────────────────────────────────────────
+model DomainCache {
+  id           String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  domain       String   @unique @db.VarChar(253)
+  lastAnalyzed DateTime @map("last_analyzed")
+  scanCount    Int      @default(1) @map("scan_count")
+  bestScore    Float?   @map("best_score")
+  bestGrade    String?  @map("best_grade") @db.VarChar(3)
+  worstScore   Float?   @map("worst_score")
+  avgScore     Float?   @map("avg_score")
+  trending     String?  @db.VarChar(16) // improving | degrading | stable
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([domain])
+  @@index([lastAnalyzed(sort: Desc)])
+  @@index([bestScore(sort: Desc)])
+  @@map("domain_cache")
+}
+
+// ─── System Metrics ──────────────────────────────────────────
+model SystemMetric {
+  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  metric     String   @db.VarChar(64)
+  value      Float
+  tags       Json?
+  recordedAt DateTime @default(now()) @map("recorded_at")
+
+  @@index([metric, recordedAt(sort: Desc)])
+  @@map("system_metrics")
+}
+
+// ─── Analysis Queue Stats ─────────────────────────────────────
+model QueueStat {
+  id             String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  queueName      String   @map("queue_name") @db.VarChar(64)
+  waiting        Int
+  active         Int
+  completed      Int
+  failed         Int
+  delayed        Int
+  throughput     Float
+  avgProcessTime Float    @map("avg_process_time")
+  errorRate      Float    @map("error_rate")
+  recordedAt     DateTime @default(now()) @map("recorded_at")
+
+  @@index([queueName, recordedAt(sort: Desc)])
+  @@map("queue_stats")
+}

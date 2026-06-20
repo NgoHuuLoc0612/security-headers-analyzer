@@ -1,0 +1,207 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
+    --radius: 0.5rem;
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224.3 76.3% 48%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+  }
+}
+
+@layer base {
+  * { @apply border-border; }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: "cv11", "ss01";
+  }
+  ::selection { @apply bg-primary/20 text-primary; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { @apply bg-transparent; }
+  ::-webkit-scrollbar-thumb { @apply bg-muted-foreground/30 rounded-full; }
+  ::-webkit-scrollbar-thumb:hover { @apply bg-muted-foreground/50; }
+}
+
+@layer components {
+  /* Grade badges */
+  .grade-badge {
+    @apply inline-flex items-center justify-center font-bold rounded-lg text-white;
+    font-variant-numeric: tabular-nums;
+  }
+  .grade-aplus { @apply bg-grade-aplus shadow-glow-green; }
+  .grade-a     { @apply bg-grade-a; }
+  .grade-b     { @apply bg-grade-b text-gray-900; }
+  .grade-c     { @apply bg-grade-c text-gray-900; }
+  .grade-d     { @apply bg-grade-d; }
+  .grade-e     { @apply bg-grade-e; }
+  .grade-f     { @apply bg-grade-f shadow-glow-red; }
+
+  /* Severity pills */
+  .sev-critical { @apply bg-red-500/10 text-red-500 border border-red-500/20; }
+  .sev-high     { @apply bg-orange-500/10 text-orange-500 border border-orange-500/20; }
+  .sev-medium   { @apply bg-yellow-500/10 text-yellow-500 border border-yellow-500/20; }
+  .sev-low      { @apply bg-blue-500/10 text-blue-500 border border-blue-500/20; }
+  .sev-info     { @apply bg-gray-500/10 text-gray-500 border border-gray-500/20; }
+
+  /* Glass card */
+  .glass-card {
+    @apply bg-card/60 backdrop-blur-md border border-border/50 rounded-xl shadow-lg;
+  }
+
+  /* Animated background grid */
+  .bg-grid {
+    background-image: var(--tw-gradient-stops);
+    background-size: 40px 40px;
+  }
+
+  /* Pipeline flow line */
+  .pipeline-line {
+    stroke-dasharray: 10 5;
+    animation: flow 2s linear infinite;
+  }
+
+  /* Neon glow button */
+  .btn-neon {
+    @apply relative overflow-hidden transition-all duration-300;
+    &::after {
+      content: '';
+      @apply absolute inset-0 opacity-0 transition-opacity duration-300;
+      background: radial-gradient(circle at center, rgba(99,102,241,0.4), transparent 70%);
+    }
+    &:hover::after { @apply opacity-100; }
+  }
+
+  /* Terminal text */
+  .terminal {
+    @apply font-mono text-green-400 bg-gray-950 rounded-lg p-4;
+    text-shadow: 0 0 10px rgba(74, 222, 128, 0.5);
+  }
+
+  /* Score ring */
+  .score-ring {
+    filter: drop-shadow(0 0 8px currentColor);
+  }
+
+  /* Visualization containers */
+  .viz-container {
+    @apply relative rounded-xl overflow-hidden;
+    background: linear-gradient(135deg, rgba(15,23,42,0.9) 0%, rgba(30,41,59,0.9) 100%);
+  }
+
+  /* D3 tooltip */
+  .d3-tooltip {
+    @apply absolute z-50 pointer-events-none px-3 py-2 rounded-lg text-sm font-medium;
+    @apply bg-popover text-popover-foreground border border-border shadow-xl;
+    max-width: 200px;
+    transition: opacity 0.15s ease;
+  }
+
+  /* Realtime pulse */
+  .pulse-dot {
+    @apply relative inline-flex h-2 w-2;
+    &::before {
+      content: '';
+      @apply absolute inline-flex h-full w-full rounded-full animate-ping opacity-75;
+      background: currentColor;
+    }
+    &::after {
+      content: '';
+      @apply relative inline-flex rounded-full h-2 w-2;
+      background: currentColor;
+    }
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #06b6d4 100%);
+  }
+  .text-gradient-green {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
+  }
+  .text-gradient-danger {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, #ef4444 0%, #f97316 100%);
+  }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+}
+
+/* D3 specific styles */
+.d3-axis text { @apply fill-muted-foreground text-xs; }
+.d3-axis line, .d3-axis path { @apply stroke-border; }
+.d3-grid line { stroke: rgba(255,255,255,0.05); }
+.d3-tooltip { position: fixed; }
+
+/* Three.js canvas */
+canvas.three-canvas {
+  outline: none;
+  cursor: grab;
+  &:active { cursor: grabbing; }
+}
+
+/* Animations for pipeline diagram */
+@keyframes dataFlow {
+  0% { stroke-dashoffset: 100; opacity: 0; }
+  20% { opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 0; }
+}
+
+.data-particle {
+  animation: dataFlow 2s linear infinite;
+  stroke-dasharray: 5 95;
+}
